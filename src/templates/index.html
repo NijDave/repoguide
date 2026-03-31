@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RepoGuide - Beginner-Friendly Repo Breakdowns</title>
+    <script src="https://unpkg.com/@tailwindcss/browser@4"></script>
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@latest/dist/full.css" rel="stylesheet">
+    <style>
+        @layer base {
+            body { @apply bg-base-200 min-h-screen; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container mx-auto px-4 py-8 max-w-4xl">
+        <header class="text-center mb-8 md:mb-12">
+            <h1 class="text-4xl md:text-5xl font-bold text-primary mb-4">RepoGuide</h1>
+            <p class="text-lg md:text-xl text-base-content/70">Understand any GitHub repository in plain English.</p>
+        </header>
+
+        <div class="card bg-base-100 shadow-xl mb-8">
+            <div class="card-body p-4 md:p-8">
+                <form id="analyze-form" class="flex flex-col md:flex-row gap-4">
+                    <input type="text" id="repo-url" placeholder="https://github.com/owner/repo" 
+                           class="input input-bordered flex-grow text-base md:text-lg" required>
+                    <button type="submit" id="submit-btn" class="btn btn-primary px-8 text-base md:text-lg">
+                        Analyze
+                    </button>
+                </form>
+                <div id="error-msg" class="text-error mt-2 hidden text-sm md:text-base"></div>
+            </div>
+        </div>
+
+        <div id="loading" class="hidden text-center py-12">
+            <span class="loading loading-spinner loading-lg text-primary"></span>
+            <p class="mt-4 text-lg">Breaking down the repository...</p>
+        </div>
+
+        <div id="results" class="hidden space-y-8">
+            <!-- Summary Section -->
+            <section class="card bg-base-100 shadow-xl">
+                <div class="card-body">
+                    <h2 class="card-title text-2xl mb-4">Project Summary</h2>
+                    <p id="summary-text" class="text-lg leading-relaxed"></p>
+                </div>
+            </section>
+
+            <!-- Tech Stack & Key Files -->
+            <div class="grid md:grid-cols-2 gap-8">
+                <section class="card bg-base-100 shadow-xl">
+                    <div class="card-body">
+                        <h2 class="card-title text-xl mb-4">Tech Stack</h2>
+                        <div id="tech-stack" class="space-y-2">
+                            <p class="text-base-content/50 italic">Coming in US2...</p>
+                        </div>
+                    </div>
+                </section>
+                <section class="card bg-base-100 shadow-xl">
+                    <div class="card-body">
+                        <h2 class="card-title text-xl mb-4">Key Files</h2>
+                        <ul id="key-files" class="list-disc list-inside space-y-1 text-primary">
+                            <li class="text-base-content/50 italic">Coming in US2...</li>
+                        </ul>
+                    </div>
+                </section>
+            </div>
+
+            <!-- Issues & Guide -->
+            <section class="card bg-base-100 shadow-xl">
+                <div class="card-body">
+                    <h2 class="card-title text-2xl mb-4">How to Contribute</h2>
+                    <div id="contribution-guide" class="prose max-w-none mb-6 whitespace-pre-wrap">
+                        <p class="text-base-content/50 italic">Coming in US3...</p>
+                    </div>
+                    
+                    <h3 class="font-bold text-lg mb-2">Good First Issues</h3>
+                    <ul id="good-first-issues" class="space-y-2">
+                        <li class="text-base-content/50 italic">Coming in US3...</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- Run Locally Section -->
+            <section class="card bg-base-100 shadow-xl">
+                <div class="card-body">
+                    <h2 class="card-title text-2xl mb-4">Run This Project Locally</h2>
+                    
+                    <div class="tabs tabs-boxed mb-4" id="run-tabs">
+                        <button type="button" class="tab tab-active" onclick="switchTab('mac')">Mac / Linux</button>
+                        <button type="button" class="tab" onclick="switchTab('win')">Windows</button>
+                    </div>
+
+                    <div id="mac-commands" class="bg-neutral text-neutral-content p-4 rounded-lg overflow-x-auto font-mono text-sm">
+                        <pre id="mac-code"></pre>
+                    </div>
+                    <div id="win-commands" class="hidden bg-neutral text-neutral-content p-4 rounded-lg overflow-x-auto font-mono text-sm">
+                        <pre id="win-code"></pre>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <script>
+        const form = document.getElementById('analyze-form');
+        const results = document.getElementById('results');
+        const loading = document.getElementById('loading');
+        const errorMsg = document.getElementById('error-msg');
+        const submitBtn = document.getElementById('submit-btn');
+
+        function switchTab(os) {
+            const tabs = document.querySelectorAll('#run-tabs .tab');
+            const macDiv = document.getElementById('mac-commands');
+            const winDiv = document.getElementById('win-commands');
+
+            if (os === 'mac') {
+                tabs[0].classList.add('tab-active');
+                tabs[1].classList.remove('tab-active');
+                macDiv.classList.remove('hidden');
+                winDiv.classList.add('hidden');
+            } else {
+                tabs[1].classList.add('tab-active');
+                tabs[0].classList.remove('tab-active');
+                winDiv.classList.remove('hidden');
+                macDiv.classList.add('hidden');
+            }
+        }
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const url = document.getElementById('repo-url').value;
+            
+            // Reset UI
+            results.classList.add('hidden');
+            errorMsg.classList.add('hidden');
+            loading.classList.remove('hidden');
+            submitBtn.disabled = true;
+
+            try {
+                const response = await fetch('/analyze', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url })
+                });
+
+                const result = await response.json();
+
+                if (result.status === 'success') {
+                    const data = result.data;
+                    document.getElementById('summary-text').innerText = data.summary;
+                    
+                    // US2: Tech Stack
+                    const techStack = document.getElementById('tech-stack');
+                    techStack.innerHTML = '';
+                    data.languages.forEach(lang => {
+                        const div = document.createElement('div');
+                        div.className = 'flex items-center gap-2';
+                        div.innerHTML = `
+                            <span class="font-bold w-20">${lang.name}</span>
+                            <progress class="progress progress-primary flex-grow" value="${lang.percentage}" max="100"></progress>
+                            <span class="text-sm w-12 text-right">${lang.percentage}%</span>
+                        `;
+                        techStack.appendChild(div);
+                    });
+
+                    // US2: Key Files
+                    const keyFiles = document.getElementById('key-files');
+                    keyFiles.innerHTML = '';
+                    data.key_files.forEach(file => {
+                        const li = document.createElement('li');
+                        li.innerHTML = `<a href="${file.url}" target="_blank" class="link link-hover link-primary">${file.name}</a>`;
+                        keyFiles.appendChild(li);
+                    });
+
+                    // US3: Contribution Guide
+                    document.getElementById('contribution-guide').innerText = data.contribution_guide;
+
+                    // US3: Good First Issues
+                    const issuesList = document.getElementById('good-first-issues');
+                    issuesList.innerHTML = '';
+                    if (data.good_first_issues && data.good_first_issues.length > 0) {
+                        data.good_first_issues.forEach(issue => {
+                            const li = document.createElement('li');
+                            li.innerHTML = `
+                                <div class="alert shadow-sm bg-base-200">
+                                    <div class="flex-grow">
+                                        <h4 class="font-bold text-sm">${issue.title}</h4>
+                                    </div>
+                                    <div class="flex-none">
+                                        <a href="${issue.url}" target="_blank" class="btn btn-sm btn-ghost text-primary underline">View on GitHub</a>
+                                    </div>
+                                </div>
+                            `;
+                            issuesList.appendChild(li);
+                        });
+                    } else {
+                        issuesList.innerHTML = '<li class="text-base-content/50 italic">No "good first issue" labels found.</li>';
+                    }
+
+                    // Run Locally Commands
+                    const owner = data.owner;
+                    const repo = data.repo;
+                    const topLang = data.languages.length > 0 ? data.languages[0].name.toLowerCase() : '';
+
+                    let macSetup = '';
+                    let winSetup = '';
+
+                    if (topLang === 'python') {
+                        macSetup = `python3 -m venv venv\nsource venv/bin/activate\npip install -r requirements.txt\npython app.py`;
+                        winSetup = `python -m venv venv\nvenv\\Scripts\\activate\npip install -r requirements.txt\npython app.py`;
+                    } else if (['javascript', 'typescript', 'html', 'css'].includes(topLang)) {
+                        macSetup = `npm install\nnpm start`;
+                        winSetup = `npm install\nnpm start`;
+                    } else {
+                        macSetup = `# Install dependencies and run (commands vary by project)`;
+                        winSetup = `# Install dependencies and run (commands vary by project)`;
+                    }
+
+                    document.getElementById('mac-code').innerText = `git clone https://github.com/${owner}/${repo}.git\ncd ${repo}\n${macSetup}`;
+                    document.getElementById('win-code').innerText = `git clone https://github.com/${owner}/${repo}.git\ncd ${repo}\n${winSetup}`;
+                    
+                    results.classList.remove('hidden');
+                } else {
+                    errorMsg.innerText = result.message;
+                    errorMsg.classList.remove('hidden');
+                }
+            } catch (err) {
+                errorMsg.innerText = "An unexpected error occurred.";
+                errorMsg.classList.remove('hidden');
+            } finally {
+                loading.classList.add('hidden');
+                submitBtn.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>

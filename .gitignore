@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+dist/
+build/
+*.egg-info/
+
+# Environments
+.env
+.env.local
+
+# Testing
+.pytest_cache/
+coverage/
+
+# Misc
+.DS_Store
+*.tmp
+*.swp
+.vscode/
+.idea/
